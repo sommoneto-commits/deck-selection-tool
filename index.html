@@ -738,17 +738,32 @@ Gruul Aggro,49,44,47,50,45,46,54,52,48,50`;
 // UTILITY FUNCTIONS
 // ============================================================================
 
+// Parse a value that might be "35%", "35,5%", "0.35", or just 35
+function parsePercentValue(value) {
+    if (typeof value === 'number' && !isNaN(value)) return value;
+    if (typeof value === 'string') {
+        // Remove % sign and handle comma as decimal separator
+        const cleaned = value.trim().replace('%', '').replace(',', '.');
+        const num = parseFloat(cleaned);
+        if (!isNaN(num)) return num;
+    }
+    return null;
+}
+
 function detectScale(values) {
-    const numericValues = values.filter(v => typeof v === 'number' && !isNaN(v) && v !== 0);
-    if (numericValues.length === 0) return 1;
+    // Convert all values to numbers first
+    const numericValues = values.map(v => parsePercentValue(v)).filter(v => v !== null && v !== 0);
+    if (numericValues.length === 0) return 100; // Default to 100 scale
     const maxVal = Math.max(...numericValues);
     const avgVal = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+    console.log('detectScale: max=', maxVal, 'avg=', avgVal, 'scale=', (maxVal > 1 || avgVal > 1) ? 100 : 1);
     return (maxVal > 1 || avgVal > 1) ? 100 : 1;
 }
 
 function normalizePercent(value, scale) {
-    if (typeof value !== 'number' || isNaN(value)) return null;
-    return scale === 100 ? value / 100 : value;
+    const num = parsePercentValue(value);
+    if (num === null) return null;
+    return scale === 100 ? num / 100 : num;
 }
 
 function clamp(value, min = 0, max = 1) {
