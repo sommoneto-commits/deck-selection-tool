@@ -1,43 +1,38 @@
 # Magic Swiss Tournament Monte Carlo Simulator
 
-A 100% static (HTML/CSS/JS) tool that runs Monte Carlo simulations of Swiss-format Magic: The Gathering tournaments. No backend required - works entirely in your browser and can be deployed to GitHub Pages.
+A 100% static single-file HTML tool that runs Monte Carlo simulations of Swiss-format Magic: The Gathering tournaments. No backend required, no server needed - just open the HTML file in any browser.
 
 ## Features
 
-- **Monte Carlo Simulation**: Run up to 1,000,000 tournament simulations
+- **Single File**: Everything in one `index.html` - just download and open
+- **Monte Carlo Simulation**: Run up to 500,000 tournament simulations
+- **Data Preview**: See first 5 rows of loaded data to verify parsing
 - **Swiss Pairing**: Approximates real Swiss pairing with point-based groupings
 - **Top 8 Bracket**: Optional single-elimination bracket simulation
-- **Web Worker**: Non-blocking simulation with progress bar and cancel support
+- **Non-blocking UI**: Simulation runs in batches to keep UI responsive
 - **Flexible Input**: Upload CSV/XLSX files or paste data directly
 - **Auto-detection**: Automatically detects percentage scales (0-1 vs 0-100)
-- **Comprehensive Stats**: P(Win), P(Top 8), Expected MW%, Win thresholds
+- **Comprehensive Stats**: P(Win), P(Top 8), Expected MW%, configurable win thresholds
 - **Export**: Download results as CSV or JSON
 - **Charts**: Visual bar charts for key metrics
+- **Built-in Example Data**: Test immediately with "Load Example" buttons
 
 ## Quick Start
 
-### Option 1: GitHub Pages Deployment
+### Option 1: Just Open It
+
+1. Download `index.html`
+2. Double-click to open in your browser
+3. Click "Load Example" on both cards to load test data
+4. Click "Run Simulation"
+
+### Option 2: GitHub Pages
 
 1. Fork or clone this repository
-2. Go to your repository **Settings** → **Pages**
+2. Go to **Settings** → **Pages**
 3. Under "Source", select **Deploy from a branch**
 4. Choose `main` branch and `/ (root)` folder
-5. Click **Save**
-6. Your site will be live at `https://yourusername.github.io/repo-name/`
-
-### Option 2: Local Usage
-
-Simply open `index.html` in a modern web browser. No server required.
-
-> **Note**: Some browsers may block Web Workers when opening files directly. If you encounter issues, use a local server:
-> ```bash
-> # Python 3
-> python -m http.server 8000
->
-> # Node.js
-> npx serve .
-> ```
-> Then open `http://localhost:8000`
+5. Your site will be live at `https://yourusername.github.io/repo-name/`
 
 ## Input Data Format
 
@@ -80,17 +75,17 @@ Golgari Midrange,52,48,50
 - **Percentage Scale**: Automatically detects 0-100 or 0-1 scale
 - **Normalization**: `meta_pct` values are normalized to sum to 1.0
 - **Mirror Matches**: Default to 50% if not specified
-- **Missing Matchups**: Fallback to weighted average winrate
+- **Missing Matchups**: Fallback to 50%
 
 ## Simulation Parameters
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| Players | 800 | Number of players per tournament |
-| Rounds | 14 | Number of Swiss rounds |
-| Trials | 100,000 | Number of tournaments to simulate |
-| Seed | Random | Optional seed for reproducibility |
-| Cut Top 8 | Yes | Simulate single-elimination bracket |
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| Players | 800 | 8-10,000 | Number of players per tournament |
+| Rounds | 14 | 1-20 | Number of Swiss rounds |
+| Trials | 10,000 | 100-500,000 | Number of tournaments to simulate |
+| Seed | Random | Any integer | Optional seed for reproducibility |
+| Cut Top 8 | Yes | Checkbox | Simulate single-elimination bracket |
 
 ## Output Metrics
 
@@ -101,35 +96,25 @@ Golgari Midrange,52,48,50
 | Avg Points | Average Swiss points (W=3, D=1, L=0) |
 | Expected MW% | Expected match win percentage |
 | Most Common Record | Most frequently occurring W-D-L record |
-| P(≥X Wins) | Configurable win thresholds |
+| P(≥X Wins) | Configurable win thresholds (default: 9, 10, 11, 12) |
 
 ## Technical Details
 
 ### Simulation Algorithm
 
 1. **Field Generation**: Players sampled from metagame distribution
-2. **Swiss Pairing**: Group by points → shuffle → pair within groups
+2. **Swiss Pairing**: Group by points → shuffle → pair within groups → float odd players down
 3. **Match Resolution**:
    - Draw check: `P(draw) = clamp((draw_i + draw_j) / 2)`
-   - Win check: `P(win) = logistic(matchup + skill_diff)`
+   - Win check: `P(win) = logistic(matchup_winrate + skill_diff * 4)`
 4. **Tiebreakers**: TB1 = sum of opponents' points, TB2 = random
-5. **Top 8 Bracket**: 1v8, 4v5, 2v7, 3v6 (no draws)
+5. **Top 8 Bracket**: 1v8, 4v5, 2v7, 3v6 (no draws allowed)
 
 ### Performance
 
-- Uses Web Worker for non-blocking simulation
-- Optimized PRNG (Mulberry32)
-- Object pooling for players
-- Progress updates every 1% of trials
-
-## File Structure
-
-```
-├── index.html      # Main HTML with embedded CSS
-├── app.js          # Application logic (parsing, UI, charts)
-├── worker.js       # Web Worker (simulation engine)
-└── README.md       # This file
-```
+- Runs in batches of 100 trials to keep UI responsive
+- Uses seeded PRNG (Mulberry32) for reproducibility
+- Object pooling for players to reduce memory allocation
 
 ## Browser Support
 
@@ -145,10 +130,13 @@ Tested on:
 - [SheetJS](https://sheetjs.com/) - XLSX parsing
 - [Chart.js](https://www.chartjs.org/) - Data visualization
 
+## File Structure
+
+```
+├── index.html      # Single-file application (HTML + CSS + JS)
+└── README.md       # This file
+```
+
 ## License
 
 MIT License - Feel free to use, modify, and distribute.
-
-## Contributing
-
-Contributions welcome! Please open an issue or PR.

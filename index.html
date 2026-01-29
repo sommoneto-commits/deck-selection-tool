@@ -132,22 +132,66 @@
             margin-top: 10px;
         }
 
+        .upload-zone .status.success {
+            color: var(--success);
+        }
+
         .paste-area {
             width: 100%;
-            min-height: 120px;
+            min-height: 100px;
             background: var(--secondary);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 12px;
             color: var(--text);
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             resize: vertical;
         }
 
         .paste-area:focus {
             outline: none;
             border-color: var(--accent);
+        }
+
+        /* Data Preview Table */
+        .preview-container {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .preview-container.active {
+            display: block;
+        }
+
+        .preview-container h4 {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            color: var(--success);
+        }
+
+        .preview-table {
+            width: 100%;
+            font-size: 0.75rem;
+            border-collapse: collapse;
+            overflow-x: auto;
+            display: block;
+        }
+
+        .preview-table th, .preview-table td {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .preview-table th {
+            background: var(--secondary);
+            color: var(--accent);
+        }
+
+        .preview-table tr:nth-child(even) {
+            background: rgba(255,255,255,0.02);
         }
 
         .form-group {
@@ -266,29 +310,7 @@
             height: 100%;
             background: linear-gradient(90deg, var(--accent), #ff9a56);
             border-radius: 12px;
-            transition: width 0.3s;
-            position: relative;
-        }
-
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(
-                90deg,
-                transparent,
-                rgba(255,255,255,0.2),
-                transparent
-            );
-            animation: shimmer 1.5s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+            transition: width 0.1s;
         }
 
         .progress-text {
@@ -425,19 +447,13 @@
             margin: 10px 0;
             color: var(--warning);
             display: none;
+            font-size: 0.85rem;
+            max-height: 150px;
+            overflow-y: auto;
         }
 
         .warning-message.active {
             display: block;
-        }
-
-        .info-box {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid #3b82f6;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            font-size: 0.85rem;
         }
 
         .thresholds-config {
@@ -494,27 +510,28 @@
             display: none !important;
         }
 
-        /* Toy data button */
         .toy-data-btn {
-            font-size: 0.8rem;
-            padding: 6px 12px;
-            margin-left: 10px;
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            margin-left: auto;
         }
 
-        /* Responsive */
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         @media (max-width: 768px) {
             .grid {
                 grid-template-columns: 1fr;
             }
-
             .charts-grid {
                 grid-template-columns: 1fr;
             }
-
             .form-row {
                 grid-template-columns: 1fr 1fr;
             }
-
             header h1 {
                 font-size: 1.5rem;
             }
@@ -524,18 +541,19 @@
 <body>
     <div class="container">
         <header>
-            <h1>⚔️ Magic Swiss Tournament Simulator</h1>
+            <h1>Magic Swiss Tournament Simulator</h1>
             <p>Monte Carlo simulation for Swiss-format Magic tournaments</p>
         </header>
 
         <div class="grid">
             <!-- Metagame Data Upload -->
             <div class="card">
-                <h2>Metagame Data (A)
+                <div class="header-row">
+                    <h2>Metagame Data (A)</h2>
                     <button class="btn btn-secondary toy-data-btn" onclick="loadToyMetagame()">Load Example</button>
-                </h2>
-                <div class="upload-zone" id="metagameUpload" onclick="document.getElementById('metagameFile').click()">
-                    <input type="file" id="metagameFile" accept=".csv,.xlsx,.xls" onchange="handleMetagameUpload(event)">
+                </div>
+                <div class="upload-zone" id="metagameUpload">
+                    <input type="file" id="metagameFile" accept=".csv,.xlsx,.xls">
                     <div class="icon">📊</div>
                     <div>Drop CSV/XLSX or click to upload</div>
                     <div class="status" id="metagameStatus">Required: archetype, meta_pct, draw_pct (optional: skill_adj)</div>
@@ -544,16 +562,23 @@
                 <textarea class="paste-area" id="metagamePaste" placeholder="archetype,meta_pct,draw_pct,skill_adj
 Mono Red,15.5,2.1,0
 UW Control,12.3,8.5,0.02
-..." onchange="parseMetagamePaste()"></textarea>
+..."></textarea>
+                <button class="btn btn-secondary" style="margin-top:10px; width:100%;" onclick="parseMetagamePaste()">Parse Pasted Data</button>
+
+                <div class="preview-container" id="metagamePreview">
+                    <h4>Preview (first 5 rows):</h4>
+                    <table class="preview-table" id="metagamePreviewTable"></table>
+                </div>
             </div>
 
             <!-- Matchup Matrix Upload -->
             <div class="card">
-                <h2>Matchup Matrix (B)
+                <div class="header-row">
+                    <h2>Matchup Matrix (B)</h2>
                     <button class="btn btn-secondary toy-data-btn" onclick="loadToyMatchups()">Load Example</button>
-                </h2>
-                <div class="upload-zone" id="matchupUpload" onclick="document.getElementById('matchupFile').click()">
-                    <input type="file" id="matchupFile" accept=".csv,.xlsx,.xls" onchange="handleMatchupUpload(event)">
+                </div>
+                <div class="upload-zone" id="matchupUpload">
+                    <input type="file" id="matchupFile" accept=".csv,.xlsx,.xls">
                     <div class="icon">🎯</div>
                     <div>Drop CSV/XLSX or click to upload</div>
                     <div class="status" id="matchupStatus">Rows = player deck, Cols = opponent deck, Cells = win%</div>
@@ -562,7 +587,13 @@ UW Control,12.3,8.5,0.02
                 <textarea class="paste-area" id="matchupPaste" placeholder=",Mono Red,UW Control,GB Midrange
 Mono Red,50,45,55
 UW Control,55,50,48
-GB Midrange,45,52,50" onchange="parseMatchupPaste()"></textarea>
+GB Midrange,45,52,50"></textarea>
+                <button class="btn btn-secondary" style="margin-top:10px; width:100%;" onclick="parseMatchupPaste()">Parse Pasted Data</button>
+
+                <div class="preview-container" id="matchupPreview">
+                    <h4>Preview (first 5 rows):</h4>
+                    <table class="preview-table" id="matchupPreviewTable"></table>
+                </div>
             </div>
         </div>
 
@@ -580,7 +611,7 @@ GB Midrange,45,52,50" onchange="parseMatchupPaste()"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="numTrials">Trials</label>
-                    <input type="number" id="numTrials" value="100000" min="100" max="1000000">
+                    <input type="number" id="numTrials" value="10000" min="100" max="500000">
                 </div>
                 <div class="form-group">
                     <label for="seed">Seed (optional)</label>
@@ -595,10 +626,6 @@ GB Midrange,45,52,50" onchange="parseMatchupPaste()"></textarea>
             <div class="form-group">
                 <label>Win Thresholds (show P(≥X wins)):</label>
                 <div class="thresholds-config" id="thresholdsConfig">
-                    <div class="threshold-tag" data-value="9">≥9 <button onclick="removeThreshold(9)">×</button></div>
-                    <div class="threshold-tag" data-value="10">≥10 <button onclick="removeThreshold(10)">×</button></div>
-                    <div class="threshold-tag" data-value="11">≥11 <button onclick="removeThreshold(11)">×</button></div>
-                    <div class="threshold-tag" data-value="12">≥12 <button onclick="removeThreshold(12)">×</button></div>
                     <input type="number" class="threshold-input" id="newThreshold" placeholder="+Add" min="0" max="20">
                     <button class="btn btn-secondary" style="padding: 6px 12px;" onclick="addThreshold()">Add</button>
                 </div>
@@ -611,7 +638,7 @@ GB Midrange,45,52,50" onchange="parseMatchupPaste()"></textarea>
 
         <!-- Action Buttons -->
         <div class="btn-group" style="margin: 20px 0;">
-            <button class="btn btn-primary" id="runBtn" onclick="runSimulation()">
+            <button class="btn btn-primary" id="runBtn" onclick="runSimulation()" disabled>
                 ▶️ Run Simulation
             </button>
             <button class="btn btn-danger hidden" id="cancelBtn" onclick="cancelSimulation()">
@@ -632,9 +659,7 @@ GB Midrange,45,52,50" onchange="parseMatchupPaste()"></textarea>
             <div class="card">
                 <h2>Simulation Results</h2>
 
-                <div class="stats-grid" id="summaryStats">
-                    <!-- Filled by JS -->
-                </div>
+                <div class="stats-grid" id="summaryStats"></div>
 
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="downloadCSV()">📄 Download CSV</button>
@@ -644,13 +669,9 @@ GB Midrange,45,52,50" onchange="parseMatchupPaste()"></textarea>
                 <div class="table-container">
                     <table id="resultsTable">
                         <thead>
-                            <tr id="tableHeader">
-                                <!-- Filled by JS -->
-                            </tr>
+                            <tr id="tableHeader"></tr>
                         </thead>
-                        <tbody id="tableBody">
-                            <!-- Filled by JS -->
-                        </tbody>
+                        <tbody id="tableBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -669,10 +690,1141 @@ GB Midrange,45,52,50" onchange="parseMatchupPaste()"></textarea>
 
         <footer>
             <p>Magic Swiss Tournament Simulator | Monte Carlo Analysis Tool</p>
-            <p>Uses <a href="https://www.papaparse.com/">PapaParse</a> & <a href="https://sheetjs.com/">SheetJS</a> for data parsing</p>
         </footer>
     </div>
 
-    <script src="app.js"></script>
+<script>
+// ============================================================================
+// GLOBAL STATE
+// ============================================================================
+
+let metagameData = null;
+let matchupData = null;
+let simulationResults = null;
+let winThresholds = [9, 10, 11, 12];
+let charts = { win: null, top8: null };
+let simulationRunning = false;
+let cancelRequested = false;
+
+// ============================================================================
+// TOY DATA
+// ============================================================================
+
+const TOY_METAGAME = `archetype,meta_pct,draw_pct,skill_adj
+Mono Red Aggro,18.5,1.5,0
+Azorius Control,14.2,9.8,0.02
+Golgari Midrange,12.8,4.5,0
+Boros Convoke,11.5,2.0,-0.01
+Dimir Midrange,10.3,5.5,0.01
+Esper Legends,8.7,6.2,0.015
+Domain Ramp,7.5,3.8,0
+Selesnya Enchantments,6.8,3.0,0
+Rakdos Sacrifice,5.4,4.0,0
+Gruul Aggro,4.3,2.2,-0.02`;
+
+const TOY_MATCHUPS = `,Mono Red Aggro,Azorius Control,Golgari Midrange,Boros Convoke,Dimir Midrange,Esper Legends,Domain Ramp,Selesnya Enchantments,Rakdos Sacrifice,Gruul Aggro
+Mono Red Aggro,50,42,48,52,45,43,58,55,47,51
+Azorius Control,58,50,52,55,48,51,45,53,54,56
+Golgari Midrange,52,48,50,54,52,49,55,51,48,53
+Boros Convoke,48,45,46,50,44,42,52,49,45,50
+Dimir Midrange,55,52,48,56,50,53,50,54,52,55
+Esper Legends,57,49,51,58,47,50,48,52,50,54
+Domain Ramp,42,55,45,48,50,52,50,47,53,46
+Selesnya Enchantments,45,47,49,51,46,48,53,50,44,48
+Rakdos Sacrifice,53,46,52,55,48,50,47,56,50,52
+Gruul Aggro,49,44,47,50,45,46,54,52,48,50`;
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+function detectScale(values) {
+    const numericValues = values.filter(v => typeof v === 'number' && !isNaN(v) && v !== 0);
+    if (numericValues.length === 0) return 1;
+    const maxVal = Math.max(...numericValues);
+    const avgVal = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+    return (maxVal > 1 || avgVal > 1) ? 100 : 1;
+}
+
+function normalizePercent(value, scale) {
+    if (typeof value !== 'number' || isNaN(value)) return null;
+    return scale === 100 ? value / 100 : value;
+}
+
+function clamp(value, min = 0, max = 1) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function parseCSV(text) {
+    const result = Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: true,
+        transformHeader: h => h.trim().toLowerCase()
+    });
+    return result.data;
+}
+
+function parseXLSX(arrayBuffer) {
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
+    return data.map(row => {
+        const normalized = {};
+        for (const key of Object.keys(row)) {
+            normalized[key.trim().toLowerCase()] = row[key];
+        }
+        return normalized;
+    });
+}
+
+async function parseFile(file) {
+    const extension = file.name.split('.').pop().toLowerCase();
+    if (extension === 'csv') {
+        const text = await file.text();
+        return parseCSV(text);
+    } else if (['xlsx', 'xls'].includes(extension)) {
+        const buffer = await file.arrayBuffer();
+        return parseXLSX(buffer);
+    }
+    throw new Error(`Unsupported file format: ${extension}`);
+}
+
+// ============================================================================
+// METAGAME PROCESSING
+// ============================================================================
+
+function processMetagameData(rawData) {
+    const warnings = [];
+
+    const archetypeKey = Object.keys(rawData[0] || {}).find(k =>
+        ['archetype', 'deck', 'name', 'deck_name', 'deckname'].includes(k)
+    );
+    if (!archetypeKey) throw new Error('Missing archetype column');
+
+    const metaKey = Object.keys(rawData[0] || {}).find(k =>
+        ['meta_pct', 'metapct', 'meta', 'meta_percent', 'metashare', 'meta_share', 'share', 'percentage', 'pct'].includes(k)
+    );
+    if (!metaKey) throw new Error('Missing meta_pct column');
+
+    const drawKey = Object.keys(rawData[0] || {}).find(k =>
+        ['draw_pct', 'drawpct', 'draw', 'draw_percent', 'draw_rate', 'drawrate'].includes(k)
+    );
+
+    const skillKey = Object.keys(rawData[0] || {}).find(k =>
+        ['skill_adj', 'skilladj', 'skill', 'skill_adjustment', 'pilot_skill'].includes(k)
+    );
+
+    const metaValues = rawData.map(r => r[metaKey]).filter(v => v != null);
+    const metaScale = detectScale(metaValues);
+
+    let drawScale = 1;
+    if (drawKey) {
+        const drawValues = rawData.map(r => r[drawKey]).filter(v => v != null);
+        drawScale = detectScale(drawValues);
+    }
+
+    const decks = [];
+    let totalMeta = 0;
+
+    for (const row of rawData) {
+        const archetype = String(row[archetypeKey] || '').trim();
+        if (!archetype) continue;
+
+        const metaPct = normalizePercent(row[metaKey], metaScale);
+        if (metaPct === null || metaPct <= 0) {
+            warnings.push(`Skipping ${archetype}: invalid meta_pct`);
+            continue;
+        }
+
+        const drawPct = drawKey ? (normalizePercent(row[drawKey], drawScale) || 0.03) : 0.03;
+        const skillAdj = skillKey ? (parseFloat(row[skillKey]) || 0) : 0;
+
+        decks.push({
+            archetype,
+            meta_pct: metaPct,
+            draw_pct: clamp(drawPct, 0, 0.5),
+            skill_adj: clamp(skillAdj, -0.5, 0.5)
+        });
+        totalMeta += metaPct;
+    }
+
+    if (totalMeta > 0) {
+        for (const deck of decks) {
+            deck.meta_pct = deck.meta_pct / totalMeta;
+        }
+    }
+
+    return { decks, warnings };
+}
+
+// ============================================================================
+// MATCHUP PROCESSING
+// ============================================================================
+
+function processMatchupData(rawData, archetypes) {
+    const warnings = [];
+    const matrix = {};
+
+    for (const a of archetypes) {
+        matrix[a] = {};
+        for (const b of archetypes) {
+            matrix[a][b] = a === b ? 0.5 : null;
+        }
+    }
+
+    const firstRow = rawData[0] || {};
+    const columns = Object.keys(firstRow);
+
+    const rowKey = columns.find(k =>
+        ['', 'deck', 'archetype', 'name', 'vs', 'player', 'row'].includes(k.toLowerCase())
+    ) || columns[0];
+
+    const opponentCols = columns.filter(c => c !== rowKey);
+
+    const colToArchetype = {};
+    for (const col of opponentCols) {
+        const normalized = col.trim();
+        const match = archetypes.find(a =>
+            a.toLowerCase() === normalized.toLowerCase() ||
+            a.toLowerCase().includes(normalized.toLowerCase()) ||
+            normalized.toLowerCase().includes(a.toLowerCase())
+        );
+        if (match) {
+            colToArchetype[col] = match;
+        } else {
+            warnings.push(`Unknown column: ${col}`);
+        }
+    }
+
+    const allWinRates = [];
+    for (const row of rawData) {
+        for (const col of opponentCols) {
+            const val = row[col];
+            if (typeof val === 'number' && !isNaN(val)) {
+                allWinRates.push(val);
+            }
+        }
+    }
+    const winScale = detectScale(allWinRates);
+
+    for (const row of rawData) {
+        const rowName = String(row[rowKey] || '').trim();
+        if (!rowName) continue;
+
+        const playerDeck = archetypes.find(a =>
+            a.toLowerCase() === rowName.toLowerCase() ||
+            a.toLowerCase().includes(rowName.toLowerCase()) ||
+            rowName.toLowerCase().includes(a.toLowerCase())
+        );
+
+        if (!playerDeck) {
+            warnings.push(`Unknown row: ${rowName}`);
+            continue;
+        }
+
+        for (const col of opponentCols) {
+            const opponentDeck = colToArchetype[col];
+            if (!opponentDeck) continue;
+
+            const rawValue = row[col];
+            if (rawValue === null || rawValue === undefined || rawValue === '') continue;
+
+            const winPct = normalizePercent(parseFloat(rawValue), winScale);
+            if (winPct !== null) {
+                matrix[playerDeck][opponentDeck] = clamp(winPct, 0, 1);
+            }
+        }
+    }
+
+    // Fill missing matchups
+    for (const player of archetypes) {
+        for (const opponent of archetypes) {
+            if (matrix[player][opponent] === null) {
+                matrix[player][opponent] = 0.5;
+                warnings.push(`Fallback: ${player} vs ${opponent} = 50%`);
+            }
+        }
+    }
+
+    return { matrix, warnings };
+}
+
+// ============================================================================
+// PREVIEW RENDERING
+// ============================================================================
+
+function renderPreview(tableId, data, maxRows = 5) {
+    const table = document.getElementById(tableId);
+    if (!data || data.length === 0) {
+        table.innerHTML = '<tr><td>No data</td></tr>';
+        return;
+    }
+
+    const headers = Object.keys(data[0]);
+    const rows = data.slice(0, maxRows);
+
+    let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+    for (const row of rows) {
+        html += '<tr>' + headers.map(h => {
+            const val = row[h];
+            return `<td>${val !== null && val !== undefined ? val : ''}</td>`;
+        }).join('') + '</tr>';
+    }
+    html += '</tbody>';
+
+    table.innerHTML = html;
+}
+
+// ============================================================================
+// FILE HANDLERS
+// ============================================================================
+
+async function handleMetagameUpload(event) {
+    const file = event.target.files ? event.target.files[0] : event;
+    if (!file) return;
+
+    try {
+        showError('');
+        const rawData = await parseFile(file);
+        const result = processMetagameData(rawData);
+
+        metagameData = result.decks;
+
+        updateMetagameStatus(true, `Loaded ${metagameData.length} decks`);
+        renderPreview('metagamePreviewTable', rawData);
+        document.getElementById('metagamePreview').classList.add('active');
+
+        if (result.warnings.length > 0) {
+            showWarning(result.warnings.join('\n'));
+        }
+
+        validateData();
+    } catch (error) {
+        showError(`Metagame error: ${error.message}`);
+        updateMetagameStatus(false, error.message);
+    }
+}
+
+async function handleMatchupUpload(event) {
+    const file = event.target.files ? event.target.files[0] : event;
+    if (!file) return;
+
+    try {
+        showError('');
+
+        if (!metagameData || metagameData.length === 0) {
+            throw new Error('Please load metagame data first');
+        }
+
+        const rawData = await parseFile(file);
+        const archetypes = metagameData.map(d => d.archetype);
+        const result = processMatchupData(rawData, archetypes);
+
+        matchupData = result.matrix;
+
+        updateMatchupStatus(true, `Loaded matchups for ${archetypes.length} decks`);
+        renderPreview('matchupPreviewTable', rawData);
+        document.getElementById('matchupPreview').classList.add('active');
+
+        if (result.warnings.length > 0) {
+            showWarning(result.warnings.slice(0, 15).join('\n'));
+        }
+
+        validateData();
+    } catch (error) {
+        showError(`Matchup error: ${error.message}`);
+        updateMatchupStatus(false, error.message);
+    }
+}
+
+function parseMetagamePaste() {
+    const text = document.getElementById('metagamePaste').value.trim();
+    if (!text) {
+        showError('Please paste metagame data first');
+        return;
+    }
+
+    try {
+        showError('');
+        const rawData = parseCSV(text);
+        const result = processMetagameData(rawData);
+
+        metagameData = result.decks;
+
+        updateMetagameStatus(true, `Loaded ${metagameData.length} decks from paste`);
+        renderPreview('metagamePreviewTable', rawData);
+        document.getElementById('metagamePreview').classList.add('active');
+
+        if (result.warnings.length > 0) {
+            showWarning(result.warnings.join('\n'));
+        }
+
+        validateData();
+    } catch (error) {
+        showError(`Metagame parse error: ${error.message}`);
+    }
+}
+
+function parseMatchupPaste() {
+    const text = document.getElementById('matchupPaste').value.trim();
+    if (!text) {
+        showError('Please paste matchup data first');
+        return;
+    }
+
+    try {
+        showError('');
+
+        if (!metagameData || metagameData.length === 0) {
+            throw new Error('Please load metagame data first');
+        }
+
+        const rawData = parseCSV(text);
+        const archetypes = metagameData.map(d => d.archetype);
+        const result = processMatchupData(rawData, archetypes);
+
+        matchupData = result.matrix;
+
+        updateMatchupStatus(true, 'Loaded matchups from paste');
+        renderPreview('matchupPreviewTable', rawData);
+        document.getElementById('matchupPreview').classList.add('active');
+
+        if (result.warnings.length > 0) {
+            showWarning(result.warnings.slice(0, 15).join('\n'));
+        }
+
+        validateData();
+    } catch (error) {
+        showError(`Matchup parse error: ${error.message}`);
+    }
+}
+
+// ============================================================================
+// TOY DATA LOADERS
+// ============================================================================
+
+function loadToyMetagame() {
+    document.getElementById('metagamePaste').value = TOY_METAGAME;
+    parseMetagamePaste();
+}
+
+function loadToyMatchups() {
+    document.getElementById('matchupPaste').value = TOY_MATCHUPS;
+    parseMatchupPaste();
+}
+
+// ============================================================================
+// UI HELPERS
+// ============================================================================
+
+function updateMetagameStatus(success, message) {
+    const zone = document.getElementById('metagameUpload');
+    const status = document.getElementById('metagameStatus');
+    zone.classList.toggle('loaded', success);
+    status.textContent = message;
+    status.classList.toggle('success', success);
+}
+
+function updateMatchupStatus(success, message) {
+    const zone = document.getElementById('matchupUpload');
+    const status = document.getElementById('matchupStatus');
+    zone.classList.toggle('loaded', success);
+    status.textContent = message;
+    status.classList.toggle('success', success);
+}
+
+function showError(message) {
+    const el = document.getElementById('errorMessage');
+    el.textContent = message;
+    el.classList.toggle('active', !!message);
+}
+
+function showWarning(message) {
+    const el = document.getElementById('warningMessage');
+    el.textContent = message;
+    el.classList.toggle('active', !!message);
+}
+
+function validateData() {
+    const runBtn = document.getElementById('runBtn');
+    runBtn.disabled = !(metagameData && metagameData.length > 0 && matchupData);
+}
+
+// ============================================================================
+// THRESHOLD MANAGEMENT
+// ============================================================================
+
+function addThreshold() {
+    const input = document.getElementById('newThreshold');
+    const value = parseInt(input.value);
+    if (isNaN(value) || value < 0 || value > 20) return;
+    if (winThresholds.includes(value)) return;
+    winThresholds.push(value);
+    winThresholds.sort((a, b) => a - b);
+    renderThresholds();
+    input.value = '';
+}
+
+function removeThreshold(value) {
+    winThresholds = winThresholds.filter(t => t !== value);
+    renderThresholds();
+}
+
+function renderThresholds() {
+    const container = document.getElementById('thresholdsConfig');
+    const input = container.querySelector('.threshold-input');
+    const addBtn = container.querySelector('.btn');
+    container.querySelectorAll('.threshold-tag').forEach(t => t.remove());
+
+    for (const t of winThresholds) {
+        const tag = document.createElement('div');
+        tag.className = 'threshold-tag';
+        tag.innerHTML = `≥${t} <button onclick="removeThreshold(${t})">×</button>`;
+        container.insertBefore(tag, input);
+    }
+}
+
+// ============================================================================
+// DRAG AND DROP
+// ============================================================================
+
+function setupDragDrop() {
+    ['metagameUpload', 'matchupUpload'].forEach(id => {
+        const zone = document.getElementById(id);
+        const input = zone.querySelector('input[type="file"]');
+
+        zone.addEventListener('click', () => input.click());
+
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.classList.add('dragover');
+        });
+
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('dragover');
+        });
+
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (!file) return;
+            if (id === 'metagameUpload') {
+                handleMetagameUpload({ target: { files: [file] } });
+            } else {
+                handleMatchupUpload({ target: { files: [file] } });
+            }
+        });
+
+        input.addEventListener('change', (e) => {
+            if (id === 'metagameUpload') {
+                handleMetagameUpload(e);
+            } else {
+                handleMatchupUpload(e);
+            }
+        });
+    });
+}
+
+// ============================================================================
+// PRNG (Mulberry32)
+// ============================================================================
+
+class PRNG {
+    constructor(seed = null) {
+        this.seed = seed !== null ? seed : Math.floor(Math.random() * 2147483647);
+        this.state = this.seed;
+    }
+
+    random() {
+        let t = this.state += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+
+    shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(this.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+}
+
+// ============================================================================
+// SIMULATION ENGINE (INLINE)
+// ============================================================================
+
+class TournamentSimulator {
+    constructor(config) {
+        this.metagame = config.metagame;
+        this.matchups = config.matchups;
+        this.numPlayers = config.numPlayers;
+        this.numRounds = config.numRounds;
+        this.cutTop8 = config.cutTop8;
+        this.thresholds = config.thresholds;
+        this.rng = new PRNG(config.seed);
+
+        this.deckNames = this.metagame.map(d => d.archetype);
+        this.deckDrawPcts = this.metagame.map(d => d.draw_pct);
+        this.deckSkillAdjs = this.metagame.map(d => d.skill_adj);
+
+        // Build matchup matrix as 2D array
+        this.matchupMatrix = [];
+        for (let i = 0; i < this.deckNames.length; i++) {
+            this.matchupMatrix[i] = [];
+            for (let j = 0; j < this.deckNames.length; j++) {
+                this.matchupMatrix[i][j] = this.matchups[this.deckNames[i]][this.deckNames[j]];
+            }
+        }
+
+        // Build CDF
+        this.metaCDF = [];
+        let cum = 0;
+        for (const deck of this.metagame) {
+            cum += deck.meta_pct;
+            this.metaCDF.push(cum);
+        }
+
+        // Init stats
+        this.stats = {};
+        for (const name of this.deckNames) {
+            this.stats[name] = {
+                count: 0, top8: 0, wins: 0, totalPoints: 0,
+                matchWins: 0, matchLosses: 0, matchDraws: 0,
+                thresholds: {}, records: {}
+            };
+            for (const t of this.thresholds) {
+                this.stats[name].thresholds[t] = 0;
+            }
+        }
+
+        // Create player pool
+        this.players = [];
+        for (let i = 0; i < this.numPlayers; i++) {
+            this.players.push({
+                id: i, deckIndex: 0, deck: null,
+                wins: 0, losses: 0, draws: 0, points: 0,
+                opponents: [], matchWins: 0, matchLosses: 0, matchDraws: 0
+            });
+        }
+    }
+
+    sampleDeck() {
+        const r = this.rng.random();
+        for (let i = 0; i < this.metaCDF.length; i++) {
+            if (r < this.metaCDF[i]) return i;
+        }
+        return this.metaCDF.length - 1;
+    }
+
+    generateField() {
+        for (let i = 0; i < this.numPlayers; i++) {
+            const deckIndex = this.sampleDeck();
+            const p = this.players[i];
+            p.deckIndex = deckIndex;
+            p.deck = this.deckNames[deckIndex];
+            p.wins = p.losses = p.draws = p.points = 0;
+            p.opponents = [];
+            p.matchWins = p.matchLosses = p.matchDraws = 0;
+        }
+    }
+
+    resolveMatch(p1, p2) {
+        const d1 = p1.deckIndex, d2 = p2.deckIndex;
+        const drawProb = Math.min(0.5, Math.max(0, (this.deckDrawPcts[d1] + this.deckDrawPcts[d2]) / 2));
+
+        if (this.rng.random() < drawProb) {
+            p1.draws++; p2.draws++;
+            p1.points++; p2.points++;
+            p1.matchDraws++; p2.matchDraws++;
+            return;
+        }
+
+        let baseWinProb = this.matchupMatrix[d1][d2];
+        const skillDiff = this.deckSkillAdjs[d1] - this.deckSkillAdjs[d2];
+        const logit = Math.log(baseWinProb / (1 - baseWinProb)) + skillDiff * 4;
+        const adjustedWinProb = Math.min(0.99, Math.max(0.01, 1 / (1 + Math.exp(-logit))));
+
+        if (this.rng.random() < adjustedWinProb) {
+            p1.wins++; p2.losses++;
+            p1.points += 3;
+            p1.matchWins++; p2.matchLosses++;
+        } else {
+            p2.wins++; p1.losses++;
+            p2.points += 3;
+            p2.matchWins++; p1.matchLosses++;
+        }
+    }
+
+    resolveMatchNoDraw(p1, p2) {
+        const d1 = p1.deckIndex, d2 = p2.deckIndex;
+        let baseWinProb = this.matchupMatrix[d1][d2];
+        const skillDiff = this.deckSkillAdjs[d1] - this.deckSkillAdjs[d2];
+        const logit = Math.log(baseWinProb / (1 - baseWinProb)) + skillDiff * 4;
+        const adjustedWinProb = Math.min(0.99, Math.max(0.01, 1 / (1 + Math.exp(-logit))));
+        return this.rng.random() < adjustedWinProb ? p1 : p2;
+    }
+
+    swissPairing() {
+        const groups = new Map();
+        for (const p of this.players) {
+            if (!groups.has(p.points)) groups.set(p.points, []);
+            groups.get(p.points).push(p);
+        }
+
+        const sortedPoints = [...groups.keys()].sort((a, b) => b - a);
+        const pairs = [];
+        let floatDown = null;
+
+        for (const points of sortedPoints) {
+            let group = groups.get(points);
+            this.rng.shuffle(group);
+
+            if (floatDown !== null) {
+                group.unshift(floatDown);
+                floatDown = null;
+            }
+
+            while (group.length >= 2) {
+                const p1 = group.shift();
+                const p2 = group.shift();
+                pairs.push([p1, p2]);
+                p1.opponents.push(p2.id);
+                p2.opponents.push(p1.id);
+            }
+
+            if (group.length === 1) {
+                floatDown = group[0];
+            }
+        }
+
+        if (floatDown !== null) {
+            floatDown.wins++;
+            floatDown.points += 3;
+            floatDown.matchWins++;
+        }
+
+        return pairs;
+    }
+
+    getStandings() {
+        for (const p of this.players) {
+            let oppPoints = 0;
+            for (const oppId of p.opponents) {
+                oppPoints += this.players[oppId].points;
+            }
+            p.tiebreaker1 = oppPoints;
+            p.tiebreaker2 = this.rng.random();
+        }
+
+        return [...this.players].sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            if (b.tiebreaker1 !== a.tiebreaker1) return b.tiebreaker1 - a.tiebreaker1;
+            return b.tiebreaker2 - a.tiebreaker2;
+        });
+    }
+
+    simulateTop8(standings) {
+        const top8 = standings.slice(0, 8);
+        const bracket = [
+            [top8[0], top8[7]], [top8[3], top8[4]],
+            [top8[1], top8[6]], [top8[2], top8[5]]
+        ];
+
+        const semis = bracket.map(([p1, p2]) => this.resolveMatchNoDraw(p1, p2));
+        const finals = [
+            this.resolveMatchNoDraw(semis[0], semis[1]),
+            this.resolveMatchNoDraw(semis[2], semis[3])
+        ];
+        return this.resolveMatchNoDraw(finals[0], finals[1]);
+    }
+
+    runTrial() {
+        this.generateField();
+
+        for (let round = 0; round < this.numRounds; round++) {
+            const pairs = this.swissPairing();
+            for (const [p1, p2] of pairs) {
+                this.resolveMatch(p1, p2);
+            }
+        }
+
+        const standings = this.getStandings();
+        const top8Players = this.cutTop8 ? standings.slice(0, 8) : [];
+        let champion = null;
+
+        if (this.cutTop8 && standings.length >= 8) {
+            champion = this.simulateTop8(standings);
+        }
+
+        for (const p of this.players) {
+            const s = this.stats[p.deck];
+            s.count++;
+            s.totalPoints += p.points;
+            s.matchWins += p.matchWins;
+            s.matchLosses += p.matchLosses;
+            s.matchDraws += p.matchDraws;
+
+            for (const t of this.thresholds) {
+                if (p.wins >= t) s.thresholds[t]++;
+            }
+
+            const record = `${p.wins}-${p.draws}-${p.losses}`;
+            s.records[record] = (s.records[record] || 0) + 1;
+        }
+
+        for (const p of top8Players) {
+            this.stats[p.deck].top8++;
+        }
+
+        if (champion) {
+            this.stats[champion.deck].wins++;
+        }
+    }
+
+    getResults(trialsRun) {
+        const decks = [];
+
+        for (const name of this.deckNames) {
+            const s = this.stats[name];
+            if (s.count === 0) continue;
+
+            const totalMatches = s.matchWins + s.matchLosses + s.matchDraws;
+
+            let mostCommonRecord = '';
+            let maxRecordCount = 0;
+            for (const [record, count] of Object.entries(s.records)) {
+                if (count > maxRecordCount) {
+                    maxRecordCount = count;
+                    mostCommonRecord = record;
+                }
+            }
+
+            const deckResult = {
+                deck: name,
+                pWin: s.wins / s.count,
+                pTop8: s.top8 / s.count,
+                avgPoints: s.totalPoints / s.count,
+                expectedMW: totalMatches > 0 ? s.matchWins / totalMatches : 0,
+                mostCommonRecord
+            };
+
+            for (const t of this.thresholds) {
+                deckResult[`p${t}Wins`] = s.thresholds[t] / s.count;
+            }
+
+            decks.push(deckResult);
+        }
+
+        decks.sort((a, b) => {
+            if (b.pWin !== a.pWin) return b.pWin - a.pWin;
+            return b.pTop8 - a.pTop8;
+        });
+
+        return {
+            decks,
+            trials: trialsRun,
+            config: {
+                numPlayers: this.numPlayers,
+                numRounds: this.numRounds,
+                cutTop8: this.cutTop8
+            },
+            thresholds: this.thresholds
+        };
+    }
+}
+
+// ============================================================================
+// SIMULATION RUNNER
+// ============================================================================
+
+async function runSimulation() {
+    if (!metagameData || !matchupData) {
+        showError('Please load both metagame and matchup data');
+        return;
+    }
+
+    const numPlayers = parseInt(document.getElementById('numPlayers').value) || 800;
+    const numRounds = parseInt(document.getElementById('numRounds').value) || 14;
+    const numTrials = parseInt(document.getElementById('numTrials').value) || 10000;
+    const seedVal = document.getElementById('seed').value;
+    const seed = seedVal ? parseInt(seedVal) : null;
+    const cutTop8 = document.getElementById('cutTop8').checked;
+
+    if (numPlayers < 8 || numPlayers > 10000) {
+        showError('Players must be between 8 and 10000');
+        return;
+    }
+
+    // UI state
+    simulationRunning = true;
+    cancelRequested = false;
+    document.getElementById('runBtn').classList.add('hidden');
+    document.getElementById('cancelBtn').classList.remove('hidden');
+    document.getElementById('progressContainer').classList.add('active');
+    document.getElementById('resultsSection').classList.remove('active');
+    showError('');
+    showWarning('');
+
+    const simulator = new TournamentSimulator({
+        metagame: metagameData,
+        matchups: matchupData,
+        numPlayers,
+        numRounds,
+        cutTop8,
+        thresholds: winThresholds,
+        seed
+    });
+
+    const batchSize = 100;
+    let completed = 0;
+
+    const runBatch = () => {
+        if (cancelRequested) {
+            cleanupSimulation();
+            showWarning('Simulation cancelled');
+            return;
+        }
+
+        const batchEnd = Math.min(completed + batchSize, numTrials);
+
+        for (let i = completed; i < batchEnd; i++) {
+            simulator.runTrial();
+        }
+
+        completed = batchEnd;
+        updateProgress(completed, numTrials);
+
+        if (completed < numTrials) {
+            setTimeout(runBatch, 0); // Yield to UI
+        } else {
+            // Done
+            simulationResults = simulator.getResults(completed);
+            showResults(simulationResults);
+            cleanupSimulation();
+        }
+    };
+
+    setTimeout(runBatch, 0);
+}
+
+function cancelSimulation() {
+    cancelRequested = true;
+}
+
+function cleanupSimulation() {
+    simulationRunning = false;
+    document.getElementById('runBtn').classList.remove('hidden');
+    document.getElementById('cancelBtn').classList.add('hidden');
+    document.getElementById('progressContainer').classList.remove('active');
+}
+
+function updateProgress(completed, total) {
+    const pct = (completed / total) * 100;
+    document.getElementById('progressFill').style.width = `${pct}%`;
+    document.getElementById('progressText').textContent =
+        `Running trial ${completed.toLocaleString()} of ${total.toLocaleString()} (${pct.toFixed(1)}%)`;
+}
+
+// ============================================================================
+// RESULTS DISPLAY
+// ============================================================================
+
+function showResults(results) {
+    const section = document.getElementById('resultsSection');
+    section.classList.add('active');
+
+    document.getElementById('summaryStats').innerHTML = `
+        <div class="stat-card">
+            <div class="value">${results.trials.toLocaleString()}</div>
+            <div class="label">Trials Run</div>
+        </div>
+        <div class="stat-card">
+            <div class="value">${results.config.numPlayers}</div>
+            <div class="label">Players/Tournament</div>
+        </div>
+        <div class="stat-card">
+            <div class="value">${results.config.numRounds}</div>
+            <div class="label">Swiss Rounds</div>
+        </div>
+        <div class="stat-card">
+            <div class="value">${results.decks.length}</div>
+            <div class="label">Decks Analyzed</div>
+        </div>
+    `;
+
+    renderResultsTable(results);
+    renderCharts(results);
+    section.scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderResultsTable(results, sortKey = 'pWin', sortDesc = true) {
+    const header = document.getElementById('tableHeader');
+    const body = document.getElementById('tableBody');
+
+    const columns = [
+        { key: 'deck', label: 'Deck', format: v => v },
+        { key: 'pWin', label: 'P(Win)', format: v => (v * 100).toFixed(3) + '%' },
+        { key: 'pTop8', label: 'P(Top 8)', format: v => (v * 100).toFixed(2) + '%' },
+        { key: 'avgPoints', label: 'Avg Points', format: v => v.toFixed(2) },
+        { key: 'expectedMW', label: 'Expected MW%', format: v => (v * 100).toFixed(1) + '%' },
+        { key: 'mostCommonRecord', label: 'Common Record', format: v => v }
+    ];
+
+    for (const t of results.thresholds) {
+        columns.push({
+            key: `p${t}Wins`,
+            label: `P(≥${t}W)`,
+            format: v => (v * 100).toFixed(2) + '%'
+        });
+    }
+
+    header.innerHTML = columns.map(col => `
+        <th data-key="${col.key}" class="${sortKey === col.key ? 'sorted' : ''}"
+            onclick="sortResultsTable('${col.key}')">
+            ${col.label}
+            <span class="sort-indicator">${sortKey === col.key ? (sortDesc ? '▼' : '▲') : '○'}</span>
+        </th>
+    `).join('');
+
+    const sortedDecks = [...results.decks].sort((a, b) => {
+        const aVal = a[sortKey];
+        const bVal = b[sortKey];
+        if (typeof aVal === 'string') {
+            return sortDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+        }
+        return sortDesc ? bVal - aVal : aVal - bVal;
+    });
+
+    body.innerHTML = sortedDecks.map(deck => `
+        <tr>
+            ${columns.map(col => `
+                <td class="${col.key === 'deck' ? 'deck-name' : ''}">
+                    ${col.format(deck[col.key])}
+                </td>
+            `).join('')}
+        </tr>
+    `).join('');
+
+    body.dataset.sortKey = sortKey;
+    body.dataset.sortDesc = sortDesc;
+}
+
+function sortResultsTable(key) {
+    const body = document.getElementById('tableBody');
+    const currentKey = body.dataset.sortKey;
+    const currentDesc = body.dataset.sortDesc === 'true';
+    const newDesc = key === currentKey ? !currentDesc : true;
+    renderResultsTable(simulationResults, key, newDesc);
+}
+
+function renderCharts(results) {
+    const decks = results.decks.slice(0, 15);
+    const labels = decks.map(d => d.deck);
+    const winData = decks.map(d => d.pWin * 100);
+    const top8Data = decks.map(d => d.pTop8 * 100);
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: {
+                ticks: { color: '#a0a0a0', maxRotation: 45, minRotation: 45 },
+                grid: { color: 'rgba(255,255,255,0.1)' }
+            },
+            y: {
+                ticks: { color: '#a0a0a0' },
+                grid: { color: 'rgba(255,255,255,0.1)' }
+            }
+        }
+    };
+
+    if (charts.win) charts.win.destroy();
+    charts.win = new Chart(document.getElementById('winChart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                data: winData,
+                backgroundColor: 'rgba(233, 69, 96, 0.8)',
+                borderColor: 'rgba(233, 69, 96, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: chartOptions
+    });
+
+    if (charts.top8) charts.top8.destroy();
+    charts.top8 = new Chart(document.getElementById('top8Chart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                data: top8Data,
+                backgroundColor: 'rgba(74, 222, 128, 0.8)',
+                borderColor: 'rgba(74, 222, 128, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: chartOptions
+    });
+}
+
+// ============================================================================
+// EXPORT
+// ============================================================================
+
+function downloadCSV() {
+    if (!simulationResults) return;
+
+    const columns = ['deck', 'pWin', 'pTop8', 'avgPoints', 'expectedMW', 'mostCommonRecord',
+        ...simulationResults.thresholds.map(t => `p${t}Wins`)];
+
+    const headers = ['Deck', 'P(Win Tournament)', 'P(Top 8)', 'Avg Points', 'Expected MW%', 'Most Common Record',
+        ...simulationResults.thresholds.map(t => `P(>=${t} Wins)`)];
+
+    let csv = headers.join(',') + '\n';
+    for (const deck of simulationResults.decks) {
+        const row = columns.map(col => {
+            const val = deck[col];
+            return typeof val === 'string' ? `"${val}"` : val;
+        });
+        csv += row.join(',') + '\n';
+    }
+
+    downloadFile(csv, 'simulation_results.csv', 'text/csv');
+}
+
+function downloadJSON() {
+    if (!simulationResults) return;
+    const json = JSON.stringify(simulationResults, null, 2);
+    downloadFile(json, 'simulation_results.json', 'application/json');
+}
+
+function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupDragDrop();
+    renderThresholds();
+    validateData();
+    console.log('Magic Swiss Tournament Simulator loaded successfully!');
+});
+</script>
 </body>
 </html>
