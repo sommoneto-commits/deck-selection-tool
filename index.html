@@ -756,29 +756,38 @@ function clamp(value, min = 0, max = 1) {
 }
 
 function parseCSV(text) {
+    console.log('Parsing CSV, first 200 chars:', text.substring(0, 200));
     const result = Papa.parse(text, {
         header: true,
         skipEmptyLines: true,
         dynamicTyping: true,
-        transformHeader: h => h.trim().toLowerCase()
+        transformHeader: h => h.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')
     });
+    console.log('CSV parsed, rows:', result.data.length, 'columns:', Object.keys(result.data[0] || {}));
+    console.log('First row:', result.data[0]);
     return result.data;
 }
 
 function parseXLSX(arrayBuffer) {
+    console.log('Parsing XLSX...');
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(firstSheet, { defval: null });
-    return data.map(row => {
-        const normalized = {};
+    console.log('XLSX raw rows:', data.length);
+    const normalized = data.map(row => {
+        const norm = {};
         for (const key of Object.keys(row)) {
-            normalized[key.trim().toLowerCase()] = row[key];
+            norm[key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')] = row[key];
         }
-        return normalized;
+        return norm;
     });
+    console.log('XLSX normalized, columns:', Object.keys(normalized[0] || {}));
+    console.log('First row:', normalized[0]);
+    return normalized;
 }
 
 async function parseFile(file) {
+    console.log('parseFile called with:', file.name, file.type, file.size, 'bytes');
     const extension = file.name.split('.').pop().toLowerCase();
     if (extension === 'csv') {
         const text = await file.text();
@@ -797,23 +806,42 @@ async function parseFile(file) {
 function processMetagameData(rawData) {
     const warnings = [];
 
-    const archetypeKey = Object.keys(rawData[0] || {}).find(k =>
-        ['archetype', 'deck', 'name', 'deck_name', 'deckname'].includes(k)
-    );
-    if (!archetypeKey) throw new Error('Missing archetype column');
+    if (!rawData || rawData.length === 0) {
+        throw new Error('No data found in file');
+    }
 
-    const metaKey = Object.keys(rawData[0] || {}).find(k =>
-        ['meta_pct', 'metapct', 'meta', 'meta_percent', 'metashare', 'meta_share', 'share', 'percentage', 'pct'].includes(k)
-    );
-    if (!metaKey) throw new Error('Missing meta_pct column');
+    const columns = Object.keys(rawData[0] || {});
+    console.log('Metagame columns found:', columns);
 
-    const drawKey = Object.keys(rawData[0] || {}).find(k =>
-        ['draw_pct', 'drawpct', 'draw', 'draw_percent', 'draw_rate', 'drawrate'].includes(k)
-    );
+    // Flexible column matching
+    const findColumn = (patterns) => {
+        for (const col of columns) {
+            for (const pattern of patterns) {
+                if (col === pattern || col.includes(pattern) || pattern.includes(col)) {
+                    return col;
+                }
+            }
+        }
+        return null;
+    };
 
-    const skillKey = Object.keys(rawData[0] || {}).find(k =>
-        ['skill_adj', 'skilladj', 'skill', 'skill_adjustment', 'pilot_skill'].includes(k)
-    );
+    const archetypeKey = findColumn(['archetype', 'deck', 'name', 'deck_name', 'deckname', 'archetipo', 'mazzo']);
+    if (!archetypeKey) {
+        throw new Error(`Missing archetype column. Found columns: [${columns.join(', ')}]. Expected one of: archetype, deck, name`);
+    }
+    console.log('Archetype column:', archetypeKey);
+
+    const metaKey = findColumn(['meta_pct', 'metapct', 'meta', 'meta_percent', 'metashare', 'meta_share', 'share', 'percentage', 'pct', 'percent', '%']);
+    if (!metaKey) {
+        throw new Error(`Missing meta_pct column. Found columns: [${columns.join(', ')}]. Expected one of: meta_pct, meta, share, pct`)
+    }
+    console.log('Meta column:', metaKey);
+
+    const drawKey = findColumn(['draw_pct', 'drawpct', 'draw', 'draw_percent', 'draw_rate', 'drawrate', 'draw_']);
+    console.log('Draw column:', drawKey || 'not found (using default 3%)');
+
+    const skillKey = findColumn(['skill_adj', 'skilladj', 'skill', 'skill_adjustment', 'pilot_skill']);
+    console.log('Skill column:', skillKey || 'not found (using default 0)');
 
     const metaValues = rawData.map(r => r[metaKey]).filter(v => v != null);
     const metaScale = detectScale(metaValues);
@@ -981,17 +1009,27 @@ function renderPreview(tableId, data, maxRows = 5) {
 // ============================================================================
 
 async function handleMetagameUpload(event) {
-    const file = event.target.files ? event.target.files[0] : event;
-    if (!file) return;
+    console.log('handleMetagameUpload called', event);
+    const file = event.target && event.target.files ? event.target.files[0] : null;
+    console.log('File extracted:', file);
+    if (!file) {
+        console.log('No file found in event');
+        return;
+    }
 
     try {
         showError('');
+        showWarning('');
+        console.log('Parsing file:', file.name);
         const rawData = await parseFile(file);
+        console.log('Raw data rows:', rawData.length);
         const result = processMetagameData(rawData);
+        console.log('Processed decks:', result.decks.length);
 
         metagameData = result.decks;
 
-        updateMetagameStatus(true, `Loaded ${metagameData.length} decks`);
+        const deckNames = metagameData.slice(0, 3).map(d => d.archetype).join(', ');
+        updateMetagameStatus(true, `✓ ${metagameData.length} decks: ${deckNames}...`);
         renderPreview('metagamePreviewTable', rawData);
         document.getElementById('metagamePreview').classList.add('active');
 
@@ -1001,29 +1039,39 @@ async function handleMetagameUpload(event) {
 
         validateData();
     } catch (error) {
+        console.error('Metagame upload error:', error);
         showError(`Metagame error: ${error.message}`);
         updateMetagameStatus(false, error.message);
     }
 }
 
 async function handleMatchupUpload(event) {
-    const file = event.target.files ? event.target.files[0] : event;
-    if (!file) return;
+    console.log('handleMatchupUpload called', event);
+    const file = event.target && event.target.files ? event.target.files[0] : null;
+    console.log('File extracted:', file);
+    if (!file) {
+        console.log('No file found in event');
+        return;
+    }
 
     try {
         showError('');
+        showWarning('');
 
         if (!metagameData || metagameData.length === 0) {
             throw new Error('Please load metagame data first');
         }
 
+        console.log('Parsing matchup file:', file.name);
         const rawData = await parseFile(file);
+        console.log('Raw matchup rows:', rawData.length);
         const archetypes = metagameData.map(d => d.archetype);
         const result = processMatchupData(rawData, archetypes);
+        console.log('Matchup matrix built');
 
         matchupData = result.matrix;
 
-        updateMatchupStatus(true, `Loaded matchups for ${archetypes.length} decks`);
+        updateMatchupStatus(true, `✓ Matchups for ${archetypes.length} decks`);
         renderPreview('matchupPreviewTable', rawData);
         document.getElementById('matchupPreview').classList.add('active');
 
@@ -1033,6 +1081,7 @@ async function handleMatchupUpload(event) {
 
         validateData();
     } catch (error) {
+        console.error('Matchup upload error:', error);
         showError(`Matchup error: ${error.message}`);
         updateMatchupStatus(false, error.message);
     }
@@ -1193,8 +1242,14 @@ function setupDragDrop() {
     ['metagameUpload', 'matchupUpload'].forEach(id => {
         const zone = document.getElementById(id);
         const input = zone.querySelector('input[type="file"]');
+        console.log('Setting up drag/drop for:', id, 'input:', input);
 
-        zone.addEventListener('click', () => input.click());
+        zone.addEventListener('click', (e) => {
+            // Don't trigger if clicking on a child button
+            if (e.target.tagName === 'BUTTON') return;
+            console.log('Zone clicked, opening file dialog');
+            input.click();
+        });
 
         zone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -1209,15 +1264,19 @@ function setupDragDrop() {
             e.preventDefault();
             zone.classList.remove('dragover');
             const file = e.dataTransfer.files[0];
+            console.log('File dropped:', file);
             if (!file) return;
+            // Create a proper event-like object
+            const fakeEvent = { target: { files: [file] } };
             if (id === 'metagameUpload') {
-                handleMetagameUpload({ target: { files: [file] } });
+                handleMetagameUpload(fakeEvent);
             } else {
-                handleMatchupUpload({ target: { files: [file] } });
+                handleMatchupUpload(fakeEvent);
             }
         });
 
         input.addEventListener('change', (e) => {
+            console.log('File input changed:', e.target.files);
             if (id === 'metagameUpload') {
                 handleMetagameUpload(e);
             } else {
